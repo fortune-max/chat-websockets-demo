@@ -1,62 +1,73 @@
 import { Server } from 'socket.io';
 import { defineNuxtModule } from '@nuxt/kit';
 
-const userMap = {}; // map socket.id to user nick
-
-// Events: typing, message, system-message; identity, handshake
+const userMap = {}; // map user nick to online status, last typing event, userNick, socket
 
 function sendSystemMessage(socket, message){
     socket.broadcast.emit("system-message", message);
 }
 
 function handleNewUser(socket, userNick){
-    userMap[socket.id] = userMap[socket.id] || userNick;
-    console.log("ID: ", userNick, userMap[socket.id]);
-    console.log("UserMap: ", userMap);
+    userMap[userNick] = {
+        userNick,
+        isOnline: true,
+        lastTypingEvent: 0,
+        socket,     // only used on server side for private messages
+    }
+    // console.log("UserMap: ", userMap);
+    socket.broadcast.emit("add-user", userNick);
     sendSystemMessage(socket, `${userNick} just joined`);
+    console.log("sent add-user", userNick);
 }
 
-function handleDisconnect(socket){
-    const userNick = userMap[socket.id];
-    console.log("Disconnect: ", userNick, socket.id);
+function handleDisconnect(socket, userNick){
+    console.log("Disconnect 2: ", userNick);
     sendSystemMessage(socket, `${userNick} just left`);
+    socket.broadcast.emit("remove-user", userNick);
+    userMap[userNick].isOnline = false;
 }
 
-function handleIncomingMessage(socket, message){
-    const userNick = userMap[socket.id] || "Anonymous";
+function handleIncomingMessage(socket, userNick, message){
     console.log(`Message from ${userNick}: ${message}`);
     socket.broadcast.emit("message", { userNick, message });
 }
 
 function handleTyping(socket, userNick){
-    console.log("Typing: ", userNick);
+    console.log("BC Typing: ", userNick);
     socket.broadcast.emit("typing", userNick);
 }
 
 export default defineNuxtModule({
     setup(_, nuxt) {
         nuxt.hook("listen", (server) => {
-            console.log("Socket listen", server.address(), server.eventNames());
+            console.log("Socket listen", server.address());
             const io = new Server(server, { cors: { origin: "*" } });
 
             io.on("connection", (socket) => {
-                socket.emit("handshake", "HELO");
+                socket.emit("handshake", userMap);
                 socket.on("identity", (userNick) => {
                     handleNewUser(socket, userNick);
                 });
             });
 
             io.on("connect", (socket) => {
-                socket.on("message", (message) => {
-                    handleIncomingMessage(socket, message);
+                socket.on("message", ({userNick, message}) => {
+                    console.log("usernick:", userNick, "message:", message);
+                    handleIncomingMessage(socket, userNick, message);
                 });
 
-                socket.on("typing", () => {
-                    handleTyping(socket, userMap[socket.id]);
+                socket.on("typing", (userNick) => {
+                    console.log("Typing event rcvd: ", userNick);
+                    handleTyping(socket, userNick);
                 });
 
-                socket.on("disconnect", () => {
-                    handleDisconnect(socket);
+                socket.on("logout", (userNick) => {
+                    console.log("Disconnect: ", userNick);
+                    handleDisconnect(socket, userNick);
+                });
+
+                socket.on("priv-msg", ({to, userNick, message}) => {
+                    userMap[to].socket.emit("priv-msg", {userNick, message});
                 });
             });
 
