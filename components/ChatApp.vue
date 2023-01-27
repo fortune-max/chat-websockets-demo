@@ -4,8 +4,8 @@
     let userMapLocal = ref({});
     const messages = ref([]);
     const textBox = ref("");
-    const userTyping = ref("none");
-    const typeTimeout = ref(10);
+    const userTyping = ref("");
+    const typeTimeout = ref(0);
     const nickName = ref(false);
     const inputPlaceholder = computed(() => nickName.value ? "Send a message..." : "Enter your nickname...");
     

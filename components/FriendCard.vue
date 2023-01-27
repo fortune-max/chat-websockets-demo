@@ -1,12 +1,15 @@
 <script setup>
     const props = defineProps(["friend", "userTyping", "typeTimeout"]);
-    console.log("props Card", props);
-    const userNick = computed(() => props.friend.userNick);
+    console.log("props Card", props); // toRef(props, 'typeTimeout');
+    
     const isOnline = computed(() => props.friend.isOnline);
-    const userTyping = computed(() => props.userTyping);
-    const typeTimeout = computed(() => props.typeTimeout);
-    const isTyping = computed(() => userTyping.value == userNick && typeTimeout > Date.now());
-    const state = computed(() => isOnline ? (isTyping ? "Typing": "Online") : "Offline");
+    const { friend } = toRefs(props);
+    const { userTyping } = toRefs(props);
+    const { typeTimeout } = toRefs(props);
+    const userNick = computed(() => props.friend.userNick);
+    const isTyping = computed(() => (userTyping.value == userNick) && (typeTimeout > Date.now()));
+    // const state = computed(() => isOnline ? (isTyping ? "Typing": "Online") : "Offline");
+    const state = computed(() => props.friend.isOnline ? "Online" : "Offline");
     
     // const isOnline = toRef(props.friend.isOnline);
     // const isTyping = ref(props.friend.lastTypingEvent > Date.now());

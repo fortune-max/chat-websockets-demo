@@ -1,8 +1,8 @@
 <script setup>
     const props = defineProps(["friends", "userTyping", "typeTimeout"]);
     console.log("props List", props);
-    const userTyping = computed(() => props.userTyping);
-    const typeTimeout = computed(() => props.typeTimeout);
+    const { userTyping } = toRefs(props);
+    const { typeTimeout } = toRefs(props);
 </script>
 
 <template>
