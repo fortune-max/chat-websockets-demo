@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
 import { defineNuxtModule } from '@nuxt/kit';
 
-const userMap = {}; // map user nick to online status, last typing event, userNick, socket
+const userMap = {}; // map userNick to { isOnline boolean, socket object }
 
 function sendSystemMessage(socket, message){
     socket.broadcast.emit("system-message", message);
@@ -9,12 +9,9 @@ function sendSystemMessage(socket, message){
 
 function handleNewUser(socket, userNick){
     userMap[userNick] = {
-        userNick,
         isOnline: true,
-        lastTypingEvent: 0,
         socket,     // only used on server side for private messages
     }
-    // console.log("UserMap: ", userMap);
     socket.broadcast.emit("add-user", userNick);
     sendSystemMessage(socket, `${userNick} just joined`);
     console.log("sent add-user", userNick);
@@ -24,7 +21,7 @@ function handleDisconnect(socket, userNick){
     console.log("Disconnect 2: ", userNick);
     sendSystemMessage(socket, `${userNick} just left`);
     socket.broadcast.emit("remove-user", userNick);
-    userMap[userNick].isOnline = false;
+    userMap.isOnline = false;
 }
 
 function handleIncomingMessage(socket, userNick, message){
@@ -37,6 +34,13 @@ function handleTyping(socket, userNick){
     socket.broadcast.emit("typing", userNick);
 }
 
+function userMapToOnlineStatus(userMap){
+    return Object.keys(userMap).reduce((acc, userNick) => {
+        acc[userNick] = userMap[userNick].isOnline;
+        return acc;
+    }, {});
+}
+
 export default defineNuxtModule({
     setup(_, nuxt) {
         nuxt.hook("listen", (server) => {
@@ -44,7 +48,7 @@ export default defineNuxtModule({
             const io = new Server(server, { cors: { origin: "*" } });
 
             io.on("connection", (socket) => {
-                socket.emit("handshake", userMap);
+                socket.emit("handshake", userMapToOnlineStatus(userMap));
                 socket.on("identity", (userNick) => {
                     handleNewUser(socket, userNick);
                 });

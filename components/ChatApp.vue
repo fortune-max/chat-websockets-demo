@@ -1,7 +1,7 @@
 <script setup>
     import io from 'socket.io-client'
     let socket;
-    let userMapLocal = ref({});
+    const onlineStatus = ref({});       // map userNick to isOnline boolean
     const messages = ref([]);
     const textBox = ref("");
     const userTyping = ref("");
@@ -65,10 +65,7 @@
     async function handleTyping (userNick) {
         console.log(userNick, "is typing");
         userTyping.value = userNick;
-        typeTimeout.value = Date.now() + 10000;
-        // userMapLocal.value[userNick].lastTypingEvent = Date.now() + 10000; // 1 sec
-        await new Promise(resolve => setTimeout(resolve, 30000));
-        console.log(userNick, "is not typing");
+        typeTimeout.value = Date.now() + 3000;
     }
 
     function handleSystemMessage(message){
@@ -78,9 +75,9 @@
     onMounted(() => {
         // only runs on the client
         socket = io();
-        socket.on('handshake', (userMap) => {
+        socket.on('handshake', (onlineStatus) => {
             console.log("connected to server");
-            userMapLocal.value = userMap;
+            onlineStatus.value = onlineStatus;
         });
 
         socket.on('message', (messageBundle) => {
@@ -102,20 +99,20 @@
 
         socket.on("add-user", (userNick) => {
             console.log("adduser", userNick);
-            userMapLocal.value[userNick] = {isOnline: true, lastTypingEvent: 0, "userNick": userNick}
-            console.log(userMapLocal.value);
+            onlineStatus.value[userNick] = true;
+            console.log(onlineStatus.value);
         });
 
         socket.on("remove-user", (userNick) => {
             console.log("rmuser", userNick);
-            userMapLocal.value[userNick].isOnline = false;
+            onlineStatus.value[userNick] = false;
         });
     });
 </script>
 
 <template>
     <div class="flex items-center gap-2 m-40">
-        <FriendsList :friends="userMapLocal" :userTyping="userTyping" :typeTimeout="typeTimeout" />
+        <FriendsList :friendsOnlineStatus="onlineStatus" :userTyping="userTyping" :typeTimeout="typeTimeout" />
         <div class="flex flex-col items-center gap-2">
             <ChatView :messages="messages"/>
             <div class="flex gap-2">

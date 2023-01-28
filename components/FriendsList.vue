@@ -1,12 +1,11 @@
 <script setup>
-    const props = defineProps(["friends", "userTyping", "typeTimeout"]);
+    const props = defineProps(["friendsOnlineStatus", "userTyping", "typeTimeout"]);
     console.log("props List", props);
-    const { userTyping } = toRefs(props);
-    const { typeTimeout } = toRefs(props);
+    const { friendsOnlineStatus, userTyping, typeTimeout } = toRefs(props)
 </script>
 
 <template>
     <div class="inline-flex flex-col gap-1 p-1">
-        <FriendCard :userTyping="userTyping" :typeTimeout="typeTimeout" v-for="(friend, id) in props.friends" :friend="friend" :key="id" />
+        <FriendCard v-for="(isOnline, friendNick, index) in friendsOnlineStatus" :isOnline="isOnline" :friendNick="friendNick" :key="index" :userTyping="userTyping" :typeTimeout="typeTimeout" />
     </div>
 </template>
